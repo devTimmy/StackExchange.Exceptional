@@ -3,11 +3,14 @@
     <OutputType>Library</OutputType>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>Latest</LangVersion>
 
     <Authors>Nick Craver</Authors>    
     <PackageId>$(AssemblyName)</PackageId>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT OR Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/NickCraver/StackExchange.Exceptional</PackageProjectUrl>
+    <PackageReleaseNotes>https://nickcraver.com/StackExchange.Exceptional/Releases</PackageReleaseNotes>
+    <Deterministic>false</Deterministic>
     
     <DebugSymbols>true</DebugSymbols>
     <DebugType>pdbonly</DebugType>
@@ -17,7 +20,8 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning" Version="2.3.38" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All"/>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.3.37" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
   </ItemGroup>
 </Project>

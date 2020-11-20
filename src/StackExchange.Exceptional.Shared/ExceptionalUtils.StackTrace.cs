@@ -44,6 +44,34 @@ namespace StackExchange.Exceptional
             // TODO: Patterns, or a bunch of these...
             private static readonly HashSet<string> _asyncFrames = new HashSet<string>()
             {
+                // 3.1 Stacks
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder.SetException(Exception exception)",
+                "System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1.SetException(Exception exception)",
+                "System.Threading.Tasks.AwaitTaskContinuation.RunOrScheduleAction(IAsyncStateMachineBox box, Boolean allowInlining)",
+                "System.Threading.Tasks.Task.FinishSlow(Boolean userDelegateExecute)",
+                "System.Threading.Tasks.Task.TrySetException(Object exceptionObject)",
+
+                // 3.0 Stacks
+                "System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)",
+                "System.Threading.Tasks.Task.RunContinuations(Object continuationObject)",
+                "System.Threading.Tasks.Task`1.TrySetResult(TResult result)",
+                "System.Threading.Tasks.AwaitTaskContinuation.RunOrScheduleAction(Action action, Boolean allowInlining)",
+                "System.Threading.Tasks.Task.CancellationCleanupLogic()",
+                "System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)",
+                "System.Threading.Tasks.Task.FinishContinuations()",
+
+                "System.Runtime.CompilerServices.AsyncMethodBuilderCore.ContinuationWrapper.Invoke()",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetExistingTaskResult(TResult result)",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception)",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetResult(TResult result)",
+                "System.Runtime.CompilerServices.AsyncTaskMethodBuilder.SetResult()",
+                "System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1.SetResult(TResult result)",
+                "System.Runtime.CompilerServices.TaskAwaiter.<>c.<OutputWaitEtwEvents>b__12_0(Action innerContinuation, Task innerTask)",
+
+                // < .NET Core 3.0 stacks
                 "System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()",
                 "System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)",
                 "System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)",
@@ -94,8 +122,10 @@ namespace StackExchange.Exceptional
 
                 int pos = 0;
                 var sb = StringBuilderCache.Get();
-                foreach (Match m in _regex.Matches(stackTrace))
+                var matches = _regex.Matches(stackTrace);
+                for (var mi = 0; mi < matches.Count; mi++)
                 {
+                    Match m = matches[mi];
                     Group leadIn = m.Groups[Groups.LeadIn],
                           frame = m.Groups[Groups.Frame],
                           type = m.Groups[Groups.Type],
@@ -108,6 +138,12 @@ namespace StackExchange.Exceptional
                           line = m.Groups[Groups.Line];
                     CaptureCollection paramTypes = m.Groups[Groups.ParamType].Captures,
                                       paramNames = m.Groups[Groups.ParamName].Captures;
+                    bool nextIsAsync = false;
+                    if (mi < matches.Count - 1)
+                    {
+                        Group nextFrame = matches[mi + 1].Groups[Groups.Frame];
+                        nextIsAsync = _asyncFrames.Contains(nextFrame.Value);
+                    }
 
                     var isAsync = _asyncFrames.Contains(frame.Value);
 
@@ -126,8 +162,17 @@ namespace StackExchange.Exceptional
 
                     if (leadIn.Index > pos)
                     {
+                        var miscContent = stackTrace.Substring(pos, leadIn.Index - pos);
+                        if (miscContent.Contains(EndStack))
+                        {
+                            // Handle end-of-stack removals and redundant multilines remaining
+                            miscContent = miscContent.Replace(EndStack, "")
+                                                     .Replace("\r\n\r\n", "\r\n")
+                                                     .Replace("\n\n", "\n\n");
+                        }
+
                         sb.Append("<span class=\"stack misc\">")
-                          .AppendHtmlEncode(stackTrace.Substring(pos, leadIn.Index - pos))
+                          .AppendHtmlEncode(miscContent)
                           .Append("</span>");
                     }
                     sb.Append("<span class=\"stack leadin\">")
@@ -136,7 +181,7 @@ namespace StackExchange.Exceptional
 
                     // Check if the next line is the end of an async hand-off
                     var nextEndStack = stackTrace.IndexOf(EndStack, m.Index + m.Length);
-                    if (nextEndStack > -1 && nextEndStack < m.Index + m.Length + 3)
+                    if ((nextEndStack > -1 && nextEndStack < m.Index + m.Length + 3) || (!isAsync && nextIsAsync))
                     {
                         sb.Append("<span class=\"stack async-tag\">async</span> ");
                     }
@@ -164,7 +209,7 @@ namespace StackExchange.Exceptional
                     }
                     sb.Append("<span class=\"stack method-section\">")
                       .Append("<span class=\"stack method\">")
-                      .AppendHtmlEncode(method.Value)
+                      .AppendHtmlEncode(NormalizeMethodName(method.Value))
                       .Append("</span>");
 
                     if (paramTypes.Count > 0)
@@ -327,6 +372,14 @@ namespace StackExchange.Exceptional
                     }
                 }
                 return sourcePath;
+            }
+
+            /// <summary>
+            /// .NET Core changes methods so generics render as as Method[T], this normalizes it.
+            /// </summary>
+            private static string NormalizeMethodName(string method)
+            {
+                return method?.Replace("[", "<").Replace("]", ">");
             }
         }
     }

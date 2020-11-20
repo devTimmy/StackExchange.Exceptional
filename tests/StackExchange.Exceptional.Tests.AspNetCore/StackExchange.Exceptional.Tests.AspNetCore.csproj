@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net461;netcoreapp2.2</TargetFrameworks>
+    <TargetFrameworks>net461;netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
     <AssemblyName>StackExchange.Exceptional.Tests.AspNetCore</AssemblyName>
+    <IsTestProject Condition="'$(OS)' != 'Windows_NT' AND $(TargetFramework.StartsWith('net4'))">false</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Configs\*.json" CopyToOutputDirectory="Always" />
@@ -9,9 +10,11 @@
   <ItemGroup>
     <ProjectReference Include="..\StackExchange.Exceptional.Tests\StackExchange.Exceptional.Tests.csproj" />
     <ProjectReference Include="..\..\src\StackExchange.Exceptional.AspNetCore\StackExchange.Exceptional.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\src\StackExchange.Exceptional.MySQL\StackExchange.Exceptional.MySQL.csproj" />
-    <ProjectReference Include="..\..\src\StackExchange.Exceptional.PostgreSql\StackExchange.Exceptional.PostgreSql.csproj" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="2.1.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
+    <PackageReference Update="Microsoft.Extensions.Configuration.Json" Version="3.1.0" />
+    <PackageReference Update="Microsoft.AspNetCore.TestHost" Version="3.1.0" />
   </ItemGroup>
 </Project>

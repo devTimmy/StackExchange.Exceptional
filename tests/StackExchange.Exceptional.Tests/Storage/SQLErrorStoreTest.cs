@@ -11,7 +11,7 @@ namespace StackExchange.Exceptional.Tests.Storage
 {
     public class SQLErrorStoreTest : StoreBaseTest, IClassFixture<SqlFixture>
     {
-        public string ConnectionString => TestConfig.Current.SQLConnectionString;
+        public string ConnectionString => TestConfig.Current.SQLServerConnectionString;
         private SqlFixture Fixture { get; }
 
         public SQLErrorStoreTest(SqlFixture fixture, ITestOutputHelper output) : base(output)
@@ -50,18 +50,20 @@ namespace StackExchange.Exceptional.Tests.Storage
         public string SkipReason { get; }
         public string TableName { get; }
         public string TableScript { get; }
+        public string ConnectionString { get; }
 
         public SqlFixture()
         {
-            Skip.IfNoConfig(nameof(TestConfig.Current.SQLConnectionString), TestConfig.Current.SQLConnectionString);
+            Skip.IfNoConfig(nameof(TestConfig.Current.SQLServerConnectionString), TestConfig.Current.SQLServerConnectionString);
             try
             {
                 var script = Resource.Get("Scripts.SqlServer.sql");
-                var csb = new SqlConnectionStringBuilder(TestConfig.Current.SQLConnectionString)
+                var csb = new SqlConnectionStringBuilder(TestConfig.Current.SQLServerConnectionString)
                 {
                     ConnectTimeout = 2000
                 };
-                using (var conn = new SqlConnection(csb.ConnectionString))
+                ConnectionString = csb.ConnectionString;
+                using (var conn = new SqlConnection(ConnectionString))
                 {
                     TableName = "Test" + Guid.NewGuid().ToString("N");
                     TableScript = script.Replace("Exceptions", TableName);
@@ -70,6 +72,7 @@ namespace StackExchange.Exceptional.Tests.Storage
             }
             catch (Exception e)
             {
+                e.MaybeLog(TestConfig.Current.SQLServerConnectionString);
                 ShouldSkip = true;
                 SkipReason = e.Message;
             }
@@ -79,7 +82,7 @@ namespace StackExchange.Exceptional.Tests.Storage
         {
             try
             {
-                using (var conn = new SqlConnection(TestConfig.Current.SQLConnectionString))
+                using (var conn = new SqlConnection(ConnectionString))
                 {
                     conn.Execute("Drop Table " + TableName);
                 }
